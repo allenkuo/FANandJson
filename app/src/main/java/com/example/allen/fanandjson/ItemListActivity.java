@@ -21,31 +21,17 @@ import com.androidnetworking.error.ANError;
 import com.androidnetworking.interfaces.AnalyticsListener;
 import com.androidnetworking.interfaces.JSONObjectRequestListener;
 import com.example.allen.fanandjson.dummy.DummyContent;
+import com.example.allen.fanandjson.object.VideoTemplate;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-import javax.xml.transform.Templates;
-
-/**
- * An activity representing a list of Items. This activity
- * has different presentations for handset and tablet-size devices. On
- * handsets, the activity presents a list of items, which when touched,
- * lead to a {@link ItemDetailActivity} representing
- * item details. On tablets, the activity presents the list of items and
- * item details side-by-side using two vertical panes.
- */
 public class ItemListActivity extends AppCompatActivity {
 
     private static final String TAG = ItemListActivity.class.getSimpleName();
-    /**
-     * Whether or not the activity is in two-pane mode, i.e. running on a tablet
-     * device.
-     */
     private boolean mTwoPane;
 
     @Override
@@ -71,10 +57,6 @@ public class ItemListActivity extends AppCompatActivity {
         setupRecyclerView((RecyclerView) recyclerView);
 
         if (findViewById(R.id.item_detail_container) != null) {
-            // The detail container view will be present only in the
-            // large-screen layouts (res/values-w900dp).
-            // If this view is present, then the
-            // activity should be in two-pane mode.
             mTwoPane = true;
         }
     }
@@ -83,8 +65,10 @@ public class ItemListActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "onResume");
-//        AndroidNetworking.get("https://www.dropbox.com/s/nfb9g7mnnt1yqrm/video.json?raw=1")
-        AndroidNetworking.get("https://www.dropbox.com/s/xljpcq7bpzig08y/new_video.json?raw=1")
+        /* API solution one */
+        AndroidNetworking.get("https://www.dropbox.com/s/nfb9g7mnnt1yqrm/video.json?raw=1")
+        /* API solution two */
+//        AndroidNetworking.get("https://www.dropbox.com/s/xljpcq7bpzig08y/new_video.json?raw=1")
                 .build()
                 .setAnalyticsListener(new AnalyticsListener() {
                     @Override
@@ -98,42 +82,58 @@ public class ItemListActivity extends AppCompatActivity {
                 .getAsJSONObject(new JSONObjectRequestListener() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        Log.d(TAG, String.valueOf(Thread.currentThread().getId()));
                         Log.d(TAG, response.toString());
 
-//                        Iterator<?> keys = response.keys();
-//                        while( keys.hasNext() ) {
-//                            String key = (String)keys.next();
-//                            if ( jObject.get(key) instanceof JSONObject ) {
-//                                System.out.println(key); // do whatever you want with it
-//                            }
-//                        }
+                        ArrayList<VideoTemplate> list = new ArrayList<>();
 
-                        JSONArray rawdata = response.optJSONArray("rawdata");
-                        ArrayList<Template> list = new ArrayList<>();
+                        /* parser solution one */
+                        JSONArray jsonArray1 = response.optJSONArray("banners");
+                        VideoTemplate template1 = new VideoTemplate();
+                        template1.setType(VideoTemplate.TYPE_BANNER);
+                        template1.setItems(VideoTemplate.createData(VideoTemplate.TYPE_BANNER, jsonArray1));
+                        list.add(template1);
 
-                        for(int i=0;i<rawdata.length();i++){
+                        JSONObject jsonObj = response.optJSONObject("liveInfo");
+                        VideoTemplate template2 = new VideoTemplate();
+                        template2.setType(VideoTemplate.TYPE_LIVE_INFO);
+                        template2.setTitle(jsonObj.optString("subunitTitle"));
+                        template2.setSubUnitId(jsonObj.optString("subunitId"));
+                        template2.setItems(VideoTemplate.createData(VideoTemplate.TYPE_LIVE_INFO, jsonObj.optJSONArray("lives")));
+                        list.add(template2);
 
-                            JSONObject data = rawdata.optJSONObject(i);
-
-                            Template template = new Template();
-
-                            template.setType(data.optString("data_type"));
-
-                            template.setTitle(data.optString("title"));
-
+                        JSONArray jsonArray2 = response.optJSONArray("subUnits");
+                        for (int i = 0; i < jsonArray2.length(); i++) {
+                            JSONObject data = jsonArray2.optJSONObject(i);
+                            VideoTemplate template = new VideoTemplate();
+                            template.setType(VideoTemplate.TYPE_SUB_UNIT);
+                            template.setTitle(data.optString("subunitTitle"));
                             template.setSubUnitId(data.optString("subunitId"));
-
-                            template.setItems(Template.createData(template.getType(), data.optJSONArray("items")));
-
+                            template.setItems(VideoTemplate.createData(VideoTemplate.TYPE_SUB_UNIT, data.optJSONArray("subunitVideos")));
                             list.add(template);
                         }
 
-                        for(Template t:list){
-                            Log.d(TAG, t.getType());
-                            Log.d(TAG, t.getTitle());
-                            Log.d(TAG, t.getSubUnitId());
-                            Log.d(TAG, String.valueOf(t.getItemSize()));
+                        /* parser solution two */
+//                        JSONArray rawdata = response.optJSONArray("rawdata");
+//
+//                        for (int i = 0; i < rawdata.length(); i++) {
+//
+//                            JSONObject data = rawdata.optJSONObject(i);
+//
+//                            VideoTemplate videoTemplate = new VideoTemplate();
+//
+//                            videoTemplate.setType(data.optString(VideoTemplate.PARAM_DATA_TYPE));
+//
+//                            videoTemplate.setTitle(data.optString(VideoTemplate.PARAM_TITLE));
+//
+//                            videoTemplate.setSubUnitId(data.optString(VideoTemplate.PARAM_SUB_UNIT_ID));
+//
+//                            videoTemplate.setItems(VideoTemplate.createData(videoTemplate.getType(), data.optJSONArray(VideoTemplate.PARAM_ITEMS)));
+//
+//                            list.add(videoTemplate);
+//                        }
+
+                        for (VideoTemplate t : list) {
+                            Log.d(TAG, t.toString());
                         }
                     }
 
